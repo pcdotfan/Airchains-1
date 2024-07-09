@@ -132,7 +132,6 @@ restart_service() {
         cecho "GREEN" "=> Successfully ran rollback commands"
     else
         cecho "RED" "Run this script in the tracks/ folder."
-        exit 1
     fi
 
     sleep 5
