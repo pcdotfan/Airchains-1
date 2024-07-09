@@ -19,6 +19,40 @@ URL2="https://api.nodejumper.io/api/v1/airchainstestnet/rpcs"
 # Global variable to store the last restart time
 LAST_RESTART_TIME=$(date +%s)
 
+RPC_DOMAINS=(
+    "https://airchains-rpc-testnet.zulnaaa.com/"
+    "https://t-airchains.rpc.utsa.tech/"
+    "https://airchains.rpc.t.stavr.tech/"
+    "https://airchains-rpc.chainad.org/"
+    "https://junction-rpc.kzvn.xyz/"
+    "https://airchains-rpc.elessarnodes.xyz/"
+    "https://airchains-testnet-rpc.apollo-sync.com/"
+    "https://rpc-airchain.danggia.xyz/"
+    "https://airchains-rpc.stakeme.pro/"
+    "https://airchains-testnet-rpc.crouton.digital/"
+    "https://airchains-testnet-rpc.itrocket.net/"
+    "https://rpc1.airchains.t.cosmostaking.com/"
+    "https://rpc.airchain.yx.lu/"
+    "https://airchains-testnet-rpc.staketab.org/"
+    "https://junction-rpc.owlstake.com/"
+    "https://rpctt-airchain.sebatian.org/"
+    "https://rpc.airchains.aknodes.net/"
+    "https://airchains-rpc-testnet.zulnaaa.com/"
+    "https://rpc-testnet-airchains.nodeist.net/"
+    "https://airchains-testnet.rpc.stakevillage.net/"
+    "https://airchains-rpc.sbgid.com/"
+    "https://airchains-test.rpc.moonbridge.team/"
+    "https://rpc-airchains-t.sychonix.com/"
+    "https://airchains-rpc.anonid.top/"
+    "https://rpc.airchains.stakeup.tech/"
+    "https://junction-testnet-rpc.nodesync.top/"
+    "https://rpc-airchain.vnbnode.com/"
+    "https://airchain-t-rpc.syanodes.my.id"
+    "https://airchains-test-rpc.nodesteam.tech/"
+    "https://junction-rpc.validatorvn.com/"
+)
+
+
 # Function definitions
 
 cecho() {
@@ -53,39 +87,22 @@ display_banner() {
 
 
 fetch_and_filter_rpcs() {
-    # Fetch and combine data from both URLs
-    combined_ips=$(
-        (curl -s "$URL1" | jq -r 'to_entries[] | select(.value.tx_index == "on") | .key';
-         curl -s "$URL2" | jq -r '.[] | select(.tx_index == true) | .ip') | sort | uniq
-    )
-
-    # Process combined and deduplicated IPs
-    cecho "YELLOW" "Fetching and filtering RPC endpoints..."
     declare -A rpc_response_times
-    while read -r ip; do
-        # Extract IP and port
-        ip_addr=$(echo $ip | cut -d':' -f1)
-        port=$(echo $ip | cut -d':' -f2)
-        
-        # Check if SSL is supported (timeout after 5 seconds)
-        if timeout 5 openssl s_client -connect ${ip_addr}:${port} </dev/null &>/dev/null; then
-            protocol="https"
-        else
-            protocol="http"
-        fi
+    cecho "YELLOW" "Fetching and filtering RPC endpoints..."
 
+    for rpc in "${RPC_DOMAINS[@]}"; do
         # Check if the site is accessible and measure response time
         start_time=$(date +%s.%N)
-        status_code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${protocol}://${ip})
+        status_code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${rpc})
         end_time=$(date +%s.%N)
         response_time=$(echo "$end_time - $start_time" | bc)
-        
+
         if [ "$status_code" -ge 200 ] && [ "$status_code" -lt 400 ]; then
-            rpc_response_times["${protocol}://${ip}"]=$response_time
+            rpc_response_times[$rpc]=$response_time
         else
             echo
         fi
-    done <<< "$combined_ips"
+    done
 
     # Sort RPC endpoints by response time and get the fastest one
     fastest_rpc=$(for rpc in "${!rpc_response_times[@]}"; do
